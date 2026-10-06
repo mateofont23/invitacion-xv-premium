@@ -21,7 +21,7 @@
     mapsLink.href = config.mapsUrl;
     mapsLink.textContent = "Ver ubicación";
     mapsLink.target = "_blank";
-    mapsLink.rel = "noopener";
+    mapsLink.rel = "noopener noreferrer";
     mapsLink.removeAttribute("aria-disabled");
     mapsLink.removeAttribute("tabindex");
   }

@@ -34,17 +34,27 @@
 
     <section class="portrait section" id="celebracion">
       <div class="section-number">01</div>
-      <div class="portrait__frame reveal">
-        <picture>
-          <source srcset="assets/3.webp" type="image/webp" />
-          <img src="3.jpg" width="2074" height="2048" alt="Retrato editorial de Laura Sofía con su vestido aqua" loading="lazy" decoding="async" />
-        </picture>
-        <div class="portrait__veil"></div>
+      <div class="portrait__scene reveal">
+        <div class="portrait__botanicals" aria-hidden="true">
+          <img class="portrait__botanical portrait__botanical--left" src="assets/portrait-botanical.svg" width="240" height="420" alt="" decoding="async" />
+          <img class="portrait__botanical portrait__botanical--right" src="assets/portrait-botanical.svg" width="240" height="420" alt="" decoding="async" />
+        </div>
+        <div class="portrait__frame">
+          <picture>
+            <source srcset="assets/3.webp" type="image/webp" />
+            <img src="3.jpg" width="2074" height="2048" alt="Retrato editorial de Laura Sofía con su vestido aqua" loading="lazy" decoding="async" />
+          </picture>
+          <div class="portrait__veil"></div>
+        </div>
       </div>
       <div class="copy copy--center reveal">
         <p class="eyebrow">Mis quince años</p>
         <h2>Un momento que quiero compartir contigo.</h2>
         <p>Hay momentos que brillan más cuando se comparten. Celebremos juntos el comienzo de una nueva etapa, rodeados de cariño y alegría.</p>
+        <div class="parents" aria-label="Mis padres">
+          <p class="parents__intro">Con el amor de mis padres</p>
+          <p class="parents__names"><span>Yeferson Andrade</span><span class="parents__and">&amp;</span><span>Yandri Ramírez</span></p>
+        </div>
       </div>
     </section>
 
@@ -88,17 +98,41 @@
         <h2 id="venue-name">Finca El Madroño</h2>
         <p id="venue-address">Campoalegre, Huila</p>
         <p class="place__note">Un espacio lleno de encanto nos espera para compartir esta noche especial.</p>
-        <a class="button button--ghost" id="maps-link" href="#lugar" aria-disabled="true" tabindex="-1">Ubicación próximamente</a>
+        <a class="button button--ghost" id="maps-link" href="https://www.google.com/maps/place/2%C2%B041'59.9%22N+75%C2%B019'09.9%22W/@2.6999333,-75.3193641,21z/data=!4m4!3m3!8m2!3d2.69996!4d-75.3194046?hl=es&amp;entry=ttu&amp;g_ep=EgoyMDI2MDkzMC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer">Ver ubicación</a>
       </div>
     </section>
 
     <section class="dress section" id="dress-code">
       <div class="section-number">04</div>
       <div class="copy copy--center reveal">
-        <p class="eyebrow">Para una noche especial</p>
-        <h2>Código de vestuario</h2>
-        <p class="dress__pending">Próximamente</p>
-        <p>Muy pronto compartiré contigo todos los detalles para acompañarnos en esta celebración.</p>
+        <p class="eyebrow">Código de vestuario</p>
+        <h2>Formal casual</h2>
+        <p>Te invitamos a lucir un estilo formal y fresco, ideal para una celebración en clima cálido.</p>
+        <p class="dress__note">Por favor, evita el color verde.</p>
+      </div>
+      <div class="dress__references reveal" role="group" aria-label="Referencias de vestuario">
+        <figure class="dress__reference">
+          <img src="assets/dress-woman.png" width="1024" height="1536" alt="Ilustración de referencia para mujer: vestido midi marfil y sandalias en tonos neutros" loading="lazy" decoding="async" />
+          <figcaption>Mujer</figcaption>
+        </figure>
+        <figure class="dress__reference">
+          <img src="assets/dress-man.png" width="1024" height="1536" alt="Ilustración de referencia para hombre: camisa clara de cuello abierto y pantalón en tono arena" loading="lazy" decoding="async" />
+          <figcaption>Hombre</figcaption>
+        </figure>
+      </div>
+      <p class="dress__reference-note reveal">Referencias de estilo. Elige la combinación que más te guste.</p>
+    </section>
+
+    <section class="gifts section" id="regalos" aria-labelledby="gifts-title">
+      <svg class="gifts__icon reveal" viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="5" y="10" width="54" height="33" rx="3" />
+        <path d="m6 12 26 18 26-18M6 41l17-15m35 15L41 26" />
+      </svg>
+      <div class="copy copy--center reveal">
+        <p class="eyebrow">Un detalle con cariño</p>
+        <h2 id="gifts-title">Lluvia de sobres</h2>
+        <p class="gifts__presence">Tu presencia es nuestro mejor regalo.</p>
+        <p>Si deseas tener un detalle conmigo,<br>contaremos con lluvia de sobres.</p>
       </div>
     </section>
 

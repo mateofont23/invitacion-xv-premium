@@ -176,10 +176,23 @@ p { line-height: 1.75; }
 .button--ghost { color: var(--ink); border: 1px solid var(--stroke); background: rgba(255,255,255,.6); }
 .button--wide { width: 100%; }
 
-.portrait { min-height: 110svh; padding-top: 130px; }
+.portrait { min-height: 0; padding-top: 68px; }
+.portrait .section-number { top: 18px; }
+.portrait__scene { position: relative; width: min(100%, 420px); isolation: isolate; }
+.portrait__botanicals { position: absolute; inset: -18px -24px -18px; overflow: hidden; pointer-events: none; z-index: 0; }
+.portrait__botanical {
+  position: absolute;
+  width: clamp(168px, 46vw, 224px);
+  height: auto;
+  opacity: .82;
+  filter: drop-shadow(0 7px 7px rgba(63, 124, 125, .17));
+}
+.portrait__botanical--left { left: 0; top: 18px; transform: rotate(-16deg); }
+.portrait__botanical--right { right: 0; top: 36px; transform: scaleX(-1) rotate(-13deg); }
 .portrait__frame {
   position: relative;
-  width: min(92vw, 420px);
+  z-index: 1;
+  width: min(100%, 420px);
   aspect-ratio: 4 / 5;
   border-radius: 210px 210px 34px 34px;
   overflow: hidden;
@@ -188,6 +201,11 @@ p { line-height: 1.75; }
 .portrait__frame picture { position: absolute; inset: 0; display: block; }
 .portrait__frame img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 58%; transform: scale(1.02); }
 .portrait__veil { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 56%, rgba(16,80,82,.22)); }
+.parents { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--stroke); }
+.parents__intro { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.copy--center p.parents__names { margin: 0; color: var(--ink); font-family: "Cormorant Garamond", Georgia, serif; font-size: 26px; line-height: 1.2; }
+.parents__names span { display: block; }
+.parents__names .parents__and { margin: 4px 0; color: var(--aqua-deep); font-size: 19px; font-style: italic; }
 
 .image-interlude { position: relative; width: min(calc(100% - 48px), 640px); aspect-ratio: 1.42; margin: 8px auto 36px; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); }
 .image-interlude picture, .image-interlude img { display: block; width: 100%; height: 100%; }
@@ -238,7 +256,16 @@ p { line-height: 1.75; }
 .button[aria-disabled="true"] { cursor: default; opacity: .78; }
 .button[aria-disabled="true"] { pointer-events: none; }
 
-.dress__pending { margin: 18px 0 0; color: var(--aqua-deep); font-family: "Cormorant Garamond", Georgia, serif; font-size: 24px; font-style: italic; }
+.dress { min-height: 0; gap: 24px; }
+.copy--center p.dress__note { display: inline-block; margin: 8px 0 0; padding: 10px 18px; border: 1px solid var(--stroke); border-radius: 999px; color: var(--ink); font-size: 12px; }
+.dress__references { width: min(100%, 440px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dress__reference { min-width: 0; margin: 0; text-align: center; }
+.dress__reference img { display: block; width: 100%; height: clamp(220px, 60vw, 285px); object-fit: contain; }
+.dress__reference figcaption { margin-top: 12px; color: var(--muted); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.dress__reference-note { max-width: 340px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; text-align: center; }
+.gifts { min-height: 0; padding-top: 64px; padding-bottom: 64px; gap: 22px; }
+.gifts__icon { width: 54px; height: 41px; color: var(--aqua-deep); }
+.gifts .gifts__presence { margin-top: 22px; font-family: "Cormorant Garamond", Georgia, serif; font-size: 23px; font-style: italic; }
 
 .rsvp-form { width: min(100%, 480px); display: grid; gap: 18px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -312,6 +339,9 @@ p { line-height: 1.75; }
 
 @media (min-width: 720px) {
   .section { padding-left: 42px; padding-right: 42px; }
+  .portrait__botanicals { left: -106px; right: -106px; }
+  .portrait__botanical--left { left: 0; top: 24px; }
+  .portrait__botanical--right { right: 0; top: 92px; }
   .portrait__frame { width: 420px; }
   h1 { font-size: 82px; }
   h2 { font-size: 52px; }
@@ -320,6 +350,7 @@ p { line-height: 1.75; }
 
 @media (max-width: 380px) {
   .section { padding-left: 18px; padding-right: 18px; }
+  .portrait__botanicals { left: -18px; right: -18px; }
   h1 { font-size: 48px; }
   h2 { font-size: 35px; }
   .form-row { grid-template-columns: 1fr; }

@@ -15,6 +15,10 @@
   const progressFill = $("#progress-fill");
   const announcer = $("#viewer-announcer");
   const music = $("#memory-music");
+  // Unmodified local copies used when Drive blocks embedded native playback.
+  const localMemoryVideos = {
+    "1eMUHCYwWq8Wh0de2IpadbTBIFN-VdurX": "assets/memories/videos/1eMUHCYwWq8Wh0de2IpadbTBIFN-VdurX.mp4"
+  };
 
   const durations = { message: 8000, photo: 7000, photoMessage: 9000, photoVideo: 5600 };
   const finalMessage = "Laura Sofía,\n\nque estos recuerdos te acompañen siempre\ny te recuerden cuánto cariño hay a tu alrededor.\n\nQue esta nueva etapa esté llena de sueños,\nalegría y momentos que valga la pena\nguardar para siempre.\n\nFelices XV.";
@@ -25,6 +29,7 @@
   let isPlaying = false;
   let currentVideo = null;
   let currentVideoCleanup = null;
+  let videoPlayAttempt = 0;
   let currentFrame = null;
   let progressTimer = null;
   let progressFrame = null;
@@ -186,7 +191,7 @@
     if (!url) return "";
     try {
       const parsed = new URL(url);
-      if (!/(^|\.)drive\.google\.com$/i.test(parsed.hostname)) return "";
+      if (!/(^|\.)drive\.google\.com$/i.test(parsed.hostname) && parsed.hostname !== "drive.usercontent.google.com") return "";
       const pathMatch = parsed.pathname.match(/\/file\/d\/([^/]+)/i);
       return parsed.searchParams.get("id") || (pathMatch ? pathMatch[1] : "");
     } catch {
@@ -207,13 +212,35 @@
     return sources;
   }
 
+  function nativeVideoUrl(value) {
+    const url = safeMediaUrl(value);
+    const fileId = driveFileId(url);
+    if (!fileId) return url;
+    const parsed = new URL(url);
+    if (parsed.hostname === "drive.usercontent.google.com") return url;
+    // Use Drive's file-content destination directly rather than its viewer
+    // or download redirect. This changes only the browser source URL.
+    const download = new URL("https://drive.usercontent.google.com/download");
+    parsed.searchParams.forEach((parameter, name) => download.searchParams.set(name, parameter));
+    download.searchParams.set("export", "download");
+    download.searchParams.set("id", fileId);
+    return download.href;
+  }
+
   function mediaFlags(memory) {
     const photos = photoSources(memory);
-    const videoUrl = safeMediaUrl(memory.videoUrl);
+    const remoteVideoUrl = nativeVideoUrl(memory.videoUrl);
+    const fileId = driveFileId(memory.videoUrl) || (!remoteVideoUrl ? driveFileId(memory.videoPreviewUrl) : "");
+    const localVideoUrl = localMemoryVideos[fileId] ? safeMediaUrl(localMemoryVideos[fileId]) : "";
+    const videos = [];
+    if (localVideoUrl) videos.push({ url: localVideoUrl, method: "local original copy" });
+    if (remoteVideoUrl) videos.push({ url: remoteVideoUrl, method: "supplied media URL" });
+    const videoUrl = videos[0]?.url || "";
     const previewUrl = safeMediaUrl(memory.videoPreviewUrl);
     return {
       photos,
       videoUrl,
+      videos,
       previewUrl,
       hasPhoto: Boolean(memory.hasPhoto || photos.length),
       hasVideo: Boolean(memory.hasVideo || videoUrl || previewUrl),
@@ -440,6 +467,7 @@
   function togglePlayback() {
     if (isPlaying) {
       isPlaying = false;
+      videoPlayAttempt += 1;
       pauseProgress();
       if (currentVideo && !currentVideo.paused) currentVideo.pause();
     } else {
@@ -470,14 +498,21 @@
   document.addEventListener("fullscreenchange", updateFullscreenControl);
 
   function startMusic() {
+    if (!music.getAttribute("src")) {
+      const source = safeMediaUrl(config.memoryExperienceMusicUrl);
+      if (!source) return;
+      music.src = source;
+    }
     if (audioAttempted) {
-      if (music.paused && !audioMuted) music.play().catch(() => {});
+      if (music.paused && !audioMuted) {
+        music.play().then(() => fadeMusic(currentVideo && !currentVideo.paused ? 0.14 : audioTargetVolume)).catch(() => {});
+      }
       return;
     }
     audioAttempted = true;
     music.volume = 0;
     music.loop = true;
-    music.play().then(() => fadeMusic(audioMuted ? 0 : audioTargetVolume, 1800)).catch(() => {});
+    music.play().then(() => fadeMusic(currentVideo && !currentVideo.paused ? 0.14 : audioTargetVolume, 1800)).catch(() => {});
   }
 
   function fadeMusic(target, duration = 900) {
@@ -505,13 +540,14 @@
   function stopMusic() {
     pauseMusic();
     music.volume = 0;
+    music.muted = false;
     audioMuted = false;
     updateMuteControl();
   }
 
   function lowerMusicForVideo() {
     if (music.paused || audioMuted) return;
-    fadeMusic(.045, 500);
+    fadeMusic(0.14, 500);
   }
 
   function restoreMusicAfterVideo() {
@@ -526,6 +562,8 @@
     } else {
       music.muted = false;
       if (isPlaying) startMusic();
+      if (currentVideo && !currentVideo.paused) lowerMusicForVideo();
+      else restoreMusicAfterVideo();
     }
     updateMuteControl();
     activateControls();
@@ -594,13 +632,13 @@
           renderCurrentMemory(allowVideoPlay);
         });
       } else {
-        renderVideoScene(memory, flags, allowVideoPlay);
+        renderVideoScene(memory, flags);
       }
       return;
     }
 
     if (flags.hasVideo) {
-      renderVideoScene(memory, flags, allowVideoPlay);
+      renderVideoScene(memory, flags);
       return;
     }
     if (flags.hasPhoto) {
@@ -696,17 +734,25 @@
     scene.append(fallback);
   }
 
-  function renderVideoScene(memory, flags, allowVideoPlay) {
+  function renderVideoScene(memory, flags) {
     const scene = document.createElement("article");
     scene.className = "memory-scene video-scene";
     const wrap = document.createElement("div");
     wrap.className = "video-wrap";
-    const url = flags.videoUrl;
+    const sources = flags.videos;
+    let sourceIndex = 0;
+    const url = sources[0]?.url || "";
 
     if (url) {
       const video = document.createElement("video");
+      video.muted = true;
+      video.defaultMuted = true;
+      video.autoplay = true;
       video.playsInline = true;
-      video.controls = true;
+      video.controls = false;
+      video.setAttribute("muted", "");
+      video.setAttribute("autoplay", "");
+      video.setAttribute("playsinline", "");
       video.preload = "metadata";
       video.dataset.previewUrl = flags.previewUrl;
       video.setAttribute("aria-label", "Video de recuerdo para Laura Sofía");
@@ -716,13 +762,20 @@
       playOverlay.setAttribute("aria-label", "Reproducir video");
       playOverlay.innerHTML = '<span class="video-play-overlay__icon" aria-hidden="true">&#9654;</span><span>Reproducir video</span>';
       playOverlay.hidden = true;
-      playOverlay.addEventListener("click", () => {
+      const onOverlayPlay = () => {
+        if (currentVideo !== video) return;
         isPlaying = true;
         updatePlayControl();
         playNativeVideo(video, playOverlay);
-      });
+      };
+      playOverlay.addEventListener("click", onOverlayPlay);
 
       const onPlay = () => {
+        if (currentVideo !== video || !isPlaying) {
+          video.pause();
+          return;
+        }
+        video.muted = true;
         playOverlay.hidden = true;
         lowerMusicForVideo();
         clearProgress();
@@ -731,8 +784,12 @@
         if (!video.ended) restoreMusicAfterVideo();
       };
       const onEnded = () => {
-        restoreMusicAfterVideo();
+        if (currentVideo !== video) return;
+        console.log("[MEMORIES] native video ended");
         if (isPlaying) nextMemory();
+      };
+      const onVolumeChange = () => {
+        if (!video.muted) video.muted = true;
       };
       let metadataCheck = null;
       const clearMetadataCheck = () => {
@@ -740,40 +797,71 @@
         metadataCheck = null;
       };
       const onError = () => {
+        if (currentVideo !== video) return;
         clearMetadataCheck();
-        console.log("[MEMORIES] native video failed, using preview");
+        const source = sources[sourceIndex];
+        const hasNextSource = sourceIndex + 1 < sources.length;
+        const errorNames = { 1: "MEDIA_ERR_ABORTED", 2: "MEDIA_ERR_NETWORK", 3: "MEDIA_ERR_DECODE", 4: "MEDIA_ERR_SRC_NOT_SUPPORTED" };
+        console.warn("[MEMORIES] native video load failed:", JSON.stringify({
+          scene: currentIndex + 1,
+          code: video.error?.code || null,
+          reason: errorNames[video.error?.code] || "media error event",
+          message: video.error?.message || "No browser error details available",
+          sourceHost: new URL(source.url).hostname,
+          sourceType: source.method,
+          readyState: video.readyState,
+          networkState: video.networkState,
+          fallback: hasNextSource ? "next native source" : flags.previewUrl ? "Drive preview iframe" : "unavailable"
+        }));
+        if (hasNextSource) {
+          sourceIndex += 1;
+          loadNativeSource();
+          return;
+        }
         activateVideoFallback(flags.previewUrl, wrap, playOverlay);
       };
-      const onLoadedMetadata = () => {
-        if (video.dataset.metadataHandled === "true") return;
+      const onCanPlay = () => {
+        if (currentVideo !== video || video.dataset.playbackReady === "true") return;
         clearMetadataCheck();
-        video.dataset.metadataHandled = "true";
-        if (allowVideoPlay && isPlaying) playNativeVideo(video, playOverlay);
-        else playOverlay.hidden = false;
+        video.dataset.playbackReady = "true";
+        console.log("[MEMORIES] native video ready:", sources[sourceIndex].method);
+        if (isPlaying) playNativeVideo(video, playOverlay);
       };
       video.addEventListener("play", onPlay);
       video.addEventListener("pause", onPause);
       video.addEventListener("ended", onEnded);
       video.addEventListener("error", onError);
-      video.addEventListener("loadedmetadata", onLoadedMetadata);
+      video.addEventListener("canplay", onCanPlay);
+      video.addEventListener("volumechange", onVolumeChange);
       currentVideoCleanup = () => {
         video.removeEventListener("play", onPlay);
         video.removeEventListener("pause", onPause);
         video.removeEventListener("ended", onEnded);
         video.removeEventListener("error", onError);
-        video.removeEventListener("loadedmetadata", onLoadedMetadata);
+        video.removeEventListener("canplay", onCanPlay);
+        video.removeEventListener("volumechange", onVolumeChange);
+        playOverlay.removeEventListener("click", onOverlayPlay);
         clearMetadataCheck();
       };
       wrap.append(video, playOverlay);
       currentVideo = video;
-      video.src = url;
-      video.load();
-      if (video.readyState >= 1) onLoadedMetadata();
-      else if (video.error || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) onError();
-      else metadataCheck = window.setInterval(() => {
-        if (video.error || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) onError();
-        else if (video.readyState >= 1) onLoadedMetadata();
-      }, 500);
+      function loadNativeSource() {
+        clearMetadataCheck();
+        videoPlayAttempt += 1;
+        video.pause();
+        video.muted = true;
+        delete video.dataset.playbackReady;
+        playOverlay.hidden = true;
+        video.src = sources[sourceIndex].url;
+        video.load();
+        if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) onCanPlay();
+        else if (video.error) onError();
+        else metadataCheck = window.setInterval(() => {
+          if (video.error) onError();
+          else if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) onCanPlay();
+        }, 500);
+      }
+      loadNativeSource();
     } else if (flags.previewUrl) {
       activateVideoFallback(flags.previewUrl, wrap);
     } else {
@@ -795,11 +883,24 @@
   }
 
   function playNativeVideo(video, overlay = null) {
-    video.play().then(() => {
-      if (overlay) overlay.hidden = true;
-    }).catch(() => {
-      if (overlay && video.isConnected) overlay.hidden = false;
-    });
+    if (currentVideo !== video || !isPlaying) return;
+    video.muted = true;
+    const attempt = ++videoPlayAttempt;
+    const isCurrent = () => currentVideo === video && attempt === videoPlayAttempt;
+    const onRejected = (error) => {
+      if (!isCurrent() || !isPlaying || error?.name === "AbortError") return;
+      console.log("[MEMORIES] native autoplay rejected:", error?.name || "playback error");
+      if (overlay) overlay.hidden = false;
+    };
+    try {
+      Promise.resolve(video.play()).then(() => {
+        if (!isCurrent()) return;
+        if (!isPlaying) video.pause();
+        else if (overlay) overlay.hidden = true;
+      }).catch(onRejected);
+    } catch (error) {
+      onRejected(error);
+    }
   }
 
   function activateVideoFallback(previewUrl, target = null, overlay = null) {
@@ -819,7 +920,6 @@
     frame.src = previewUrl;
     frame.title = "Video de recuerdo para Laura Sofía";
     frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
-    frame.allowFullscreen = true;
     frame.loading = "lazy";
     frame.addEventListener("load", () => {
       frame.dataset.loaded = "true";
@@ -832,14 +932,16 @@
 
   function discardCurrentVideo() {
     if (!currentVideo) return;
-    try { currentVideo.pause(); } catch { /* media can already be detached */ }
-    try { if (currentVideo.readyState > 0) currentVideo.currentTime = 0; } catch { /* metadata may not be available yet */ }
+    videoPlayAttempt += 1;
     if (currentVideoCleanup) currentVideoCleanup();
     currentVideoCleanup = null;
+    try { currentVideo.pause(); } catch { /* media can already be detached */ }
+    try { if (currentVideo.readyState > 0) currentVideo.currentTime = 0; } catch { /* metadata may not be available yet */ }
     currentVideo.removeAttribute("src");
     try { currentVideo.load(); } catch { /* the source may already be unavailable */ }
     currentVideo.remove();
     currentVideo = null;
+    restoreMusicAfterVideo();
   }
 
   function showVideoFailureFallback(target) {
