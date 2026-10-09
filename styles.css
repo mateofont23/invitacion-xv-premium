@@ -209,7 +209,7 @@ p { line-height: 1.75; }
 
 .image-interlude { position: relative; width: min(calc(100% - 48px), 640px); aspect-ratio: 1.42; margin: 8px auto 36px; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); }
 .image-interlude picture, .image-interlude img { display: block; width: 100%; height: 100%; }
-.image-interlude img { object-fit: cover; object-position: 50% 62%; }
+.image-interlude img { object-fit: cover; object-position: 50% 2%; }
 
 .big-time { margin: 20px 0 0; font-size: 18px; letter-spacing: .14em; }
 .event-facts { width: min(100%, 440px); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
