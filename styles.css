@@ -373,6 +373,42 @@ p { line-height: 1.75; }
   .cover__photo img { object-position: 50% 42%; }
 }
 
+@media (max-width: 600px) {
+  .rsvp {
+    min-height: 0;
+    padding: 124px 36px calc(88px + env(safe-area-inset-bottom, 0px));
+    gap: 40px;
+  }
+  .rsvp.section--glass::before { inset: 64px 8px 28px; border-radius: 36px; }
+  .rsvp > .copy { padding-inline: 0; }
+  .rsvp > .copy > .eyebrow { margin-bottom: 18px; line-height: 1.7; }
+  .rsvp h2 { font-size: clamp(36px, 10vw, 42px); line-height: 1.12; }
+  .rsvp > .copy > p:last-child { max-width: 32ch; margin: 20px auto 0; font-size: 14px; line-height: 1.85; }
+
+  .rsvp-form { min-width: 0; gap: 28px; }
+  .rsvp-form .form-row { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .rsvp-form label > span, .rsvp-form legend { margin: 0 0 12px 2px; line-height: 1.6; }
+  .rsvp-form input:not([type="radio"]), .rsvp-form select, .rsvp-form textarea { font-size: 16px; line-height: 1.5; }
+  .rsvp-form input:not([type="radio"]), .rsvp-form select { min-height: 56px; }
+  .rsvp-form textarea { min-height: 132px; padding: 16px; resize: vertical; }
+  .rsvp-form :is(input, select, textarea, button) { scroll-margin-block: 32px calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+  .rsvp .invitation-details { padding: 0 2px 12px; }
+  .rsvp .invitation-details p { margin: 0; line-height: 1.85; }
+  .rsvp .invitation-details .eyebrow { margin-bottom: 14px; }
+  .rsvp .invitation-details .invitation-guest { font-size: 32px; line-height: 1.25; }
+  .rsvp #invitation-quota { margin-top: 16px; }
+  .rsvp #invitation-response { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--stroke); }
+
+  .rsvp-form fieldset { margin-block: 4px; }
+  .rsvp-form .choice-row { gap: 12px; }
+  .rsvp-form .choice span { min-height: 56px; padding: 12px 8px; font-size: 14px !important; }
+  .rsvp-form #companions-field { margin-block: 4px; }
+  .rsvp-form .rsvp-deadline { margin: 8px 0 0; line-height: 1.8; }
+  .rsvp-form button[type="submit"] { min-height: 56px; margin-top: 4px; padding-block: 14px; }
+  .rsvp-form .form-status { line-height: 1.8; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
