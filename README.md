@@ -21,15 +21,21 @@ python -m http.server 8080
 
 Luego abre `http://localhost:8080`.
 
-## Saludo personalizado
+## Invitaciones personalizadas
 
-Opcionalmente, la web admite un nombre en la URL:
+Los enlaces individuales reciben el código mediante `?i=`. El código se normaliza con `trim().toUpperCase()` y se consulta al endpoint de `config.js` por POST, con `Content-Type: text/plain;charset=utf-8`, `redirect: follow` y este cuerpo:
 
-```text
-?invitado=Laura%20Gomez
+```json
+{ "type": "invite", "action": "lookup", "inviteCode": "CODIGO_INDIVIDUAL" }
 ```
 
-Esto personaliza el saludo; el formulario mantiene un máximo general de siete acompañantes.
+Una respuesta con `ok: true` y `valid: true` permite mostrar el nombre de referencia y limita los acompañantes a `0…maxCompanions`. El nombre y apellido del formulario siguen siendo editables. El RSVP conserva sus campos, `requestId` y reintentos, y agrega `inviteCode` cuando la invitación está validada. Los datos de la invitación permanecen solo en memoria.
+
+Con código inválido, vacío o pendiente de validar se bloquea únicamente el RSVP. Un fallo de consulta muestra un mensaje y permite reintentar. Una respuesta ya registrada se indica sin impedir actualizaciones. El backend conserva la validación definitiva del cupo.
+
+Sin `?i=` no se consulta la invitación ni se muestra un nombre personalizado; se mantiene temporalmente el RSVP público de hasta siete acompañantes, mientras el backend tenga `invitationControlEnforced: false`. El antiguo parámetro `invitado` deja de personalizar la página.
+
+El endpoint desplegado debe aceptar la consulta anterior. El archivo opcional `backend/apps-script.gs` de esta carpeta no contiene ese sistema; no reemplaces con él el backend actual.
 
 ## Publicación recomendada
 

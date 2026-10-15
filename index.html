@@ -141,6 +141,14 @@
       </div>
 
       <form class="rsvp-form reveal" id="rsvp-form">
+        <div class="invitation-details" id="invitation-details" hidden>
+          <p class="eyebrow">Invitación para</p>
+          <p class="invitation-guest" id="invitation-guest"></p>
+          <p id="invitation-quota"></p>
+          <p id="invitation-response" hidden>Ya existe una respuesta registrada para esta invitación. Puedes actualizarla con este formulario.</p>
+        </div>
+        <p class="form-status" id="invitation-status" role="status" aria-live="polite" hidden></p>
+        <button class="button button--ghost" id="invitation-retry" type="button" hidden>Intentar nuevamente</button>
         <div class="form-row">
           <label><span>Nombre</span><input id="guest-name" name="nombre" autocomplete="given-name" required placeholder="Tu nombre" /></label>
           <label><span>Apellido</span><input id="guest-surname" name="apellido" autocomplete="family-name" required placeholder="Tu apellido" /></label>

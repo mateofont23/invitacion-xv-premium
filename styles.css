@@ -268,6 +268,11 @@ p { line-height: 1.75; }
 .gifts .gifts__presence { margin-top: 22px; font-family: "Cormorant Garamond", Georgia, serif; font-size: 23px; font-style: italic; }
 
 .rsvp-form { width: min(100%, 480px); display: grid; gap: 18px; }
+.invitation-details { text-align: center; overflow-wrap: anywhere; }
+.invitation-details p { margin: 8px 0; color: var(--muted); font-size: 13px; }
+.invitation-details .eyebrow { color: var(--aqua-deep); font-size: 10px; }
+.invitation-details .invitation-guest { color: var(--ink); font-family: "Cormorant Garamond", Georgia, serif; font-size: 30px; }
+#invitation-retry[hidden] { display: none; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-row label { min-width: 0; }
 .rsvp-form label > span, .rsvp-form legend { display: block; margin: 0 0 8px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); }

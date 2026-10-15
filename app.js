@@ -4,7 +4,8 @@
   const APPS_SCRIPT_URL = String(config.appsScriptUrl || "").trim();
 
   const params = new URLSearchParams(window.location.search);
-  const invitedName = (params.get("invitado") || "").trim();
+  const hasInviteCode = params.has("i");
+  const inviteCode = (params.get("i") || "").trim().toUpperCase();
   const celebrant = config.celebrant || "Laura Sofía Andrade Ramírez";
 
   $("#celebrant-name").textContent = celebrant;
@@ -26,16 +27,11 @@
     mapsLink.removeAttribute("tabindex");
   }
 
-  if (invitedName) {
-    $("#personal-greeting").textContent = `${invitedName}, me encantará compartir contigo esta noche tan especial.`;
-    $("#guest-name").value = invitedName;
-  }
-
   const companions = $("#companions");
-  const maxCompanions = Math.min(7, Math.max(0, Number(config.maxCompanions) || 7));
-  for (const option of [...companions.options]) {
-    option.disabled = Number(option.value) > maxCompanions;
-  }
+  const configuredMaxCompanions = Number(config.maxCompanions);
+  let maxCompanions = Number.isInteger(configuredMaxCompanions)
+    ? Math.min(7, Math.max(0, configuredMaxCompanions))
+    : 7;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -64,15 +60,16 @@
   renderCountdown();
   setInterval(renderCountdown, 1000);
 
-  const postPayload = async (payload) => {
+  const postPayload = async (payload, signal) => {
     const isRSVP = payload.type === "rsvp";
-    if (isRSVP) console.log("[RSVP] Sending payload:", payload);
+    if (isRSVP) console.log("[RSVP] Sending payload:", { ...payload, inviteCode: payload.inviteCode ? "[privado]" : "" });
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
-      redirect: "follow"
+      redirect: "follow",
+      signal
     });
 
     const responseText = await response.text();
@@ -89,6 +86,7 @@
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}: ${result.message || result.error || "La solicitud no pudo completarse."}`);
     }
+    if (payload.type === "invite" && result.valid === false) return result;
     if (result.ok === false || (isRSVP && result.ok !== true)) {
       throw new Error(result.message || result.error || "El backend no confirmó el registro.");
     }
@@ -121,9 +119,98 @@
   const attendanceInputs = [...form.querySelectorAll('input[name="asiste"]')];
   const submitButton = form.querySelector('button[type="submit"]');
   const submitLabel = submitButton.textContent;
+  const invitationDetails = $("#invitation-details");
+  const invitationStatus = $("#invitation-status");
+  const invitationRetry = $("#invitation-retry");
+  let invitation = null;
+  let invitationState = hasInviteCode ? "loading" : "none";
   let isSubmitting = false;
   let pendingPayload = null;
   let pendingPayloadKey = "";
+
+  const setCompanionOptions = (limit) => {
+    const selected = Number(companions.value);
+    companions.replaceChildren();
+    for (let count = 0; count <= limit; count += 1) {
+      const option = document.createElement("option");
+      option.value = String(count);
+      option.textContent = String(count);
+      companions.append(option);
+    }
+    companions.value = String(Number.isInteger(selected) && selected >= 0 && selected <= limit ? selected : 0);
+    companions.setCustomValidity("");
+  };
+
+  const updateRSVPAvailability = () => {
+    const canConfirm = !hasInviteCode || invitationState === "valid";
+    const notAttending = attendanceInputs.some((input) => input.checked && input.value === "no");
+    submitButton.disabled = isSubmitting || !canConfirm;
+    companions.disabled = !canConfirm || notAttending;
+    $("#companions-field").style.opacity = notAttending ? ".45" : "1";
+    if (notAttending) companions.value = "0";
+  };
+
+  const lookupInvitation = async () => {
+    if (!hasInviteCode || invitationState === "valid") return;
+    invitationState = "loading";
+    invitationStatus.hidden = false;
+    invitationStatus.textContent = "Validando tu invitación…";
+    invitationRetry.hidden = true;
+    updateRSVPAvailability();
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    try {
+      if (!inviteCode) {
+        invitationState = "invalid";
+      } else {
+        if (!APPS_SCRIPT_URL) throw new Error("Endpoint no configurado.");
+        const result = await postPayload({ type: "invite", action: "lookup", inviteCode }, controller.signal);
+        if (result.valid === false) {
+          invitationState = "invalid";
+        } else {
+          if (result.ok !== true || result.valid !== true
+            || typeof result.guestName !== "string" || !result.guestName.trim()
+            || !Number.isSafeInteger(result.maxCompanions) || result.maxCompanions < 0
+            || !Number.isSafeInteger(result.totalQuota) || result.totalQuota !== result.maxCompanions + 1) {
+            throw new Error("Respuesta de invitación incompleta.");
+          }
+          invitation = {
+            inviteCode,
+            guestName: result.guestName.trim(),
+            maxCompanions: result.maxCompanions,
+            totalQuota: result.totalQuota
+          };
+          maxCompanions = invitation.maxCompanions;
+          setCompanionOptions(maxCompanions);
+          $("#invitation-guest").textContent = invitation.guestName;
+          $("#invitation-quota").textContent = maxCompanions === 0
+            ? "Tu invitación es personal."
+            : `Tu invitación permite: ${maxCompanions} ${maxCompanions === 1 ? "acompañante" : "acompañantes"}.`;
+          $("#invitation-response").hidden = !String(result.rsvpStatus || "").trim();
+          invitationDetails.hidden = false;
+          invitationState = "valid";
+          invitationStatus.textContent = "";
+          invitationStatus.hidden = true;
+        }
+      }
+      if (invitationState === "invalid") {
+        invitationStatus.textContent = "No pudimos validar esta invitación. Verifica que estés usando el enlace que recibiste.";
+      }
+    } catch {
+      invitationState = "error";
+      invitationStatus.textContent = "No fue posible validar tu invitación en este momento. Intenta nuevamente.";
+      invitationRetry.hidden = false;
+    } finally {
+      clearTimeout(timeout);
+      updateRSVPAvailability();
+    }
+  };
+
+  invitationRetry.addEventListener("click", lookupInvitation);
+  setCompanionOptions(maxCompanions);
+  updateRSVPAvailability();
+  if (hasInviteCode) lookupInvitation();
 
   const buildPayload = () => {
     const formData = new FormData(form);
@@ -141,9 +228,9 @@
     surnameInput.setCustomValidity(apellido ? "" : "Escribe tu apellido.");
     phoneInput.setCustomValidity(validColombianPhone ? "" : "Ingresa un teléfono colombiano válido.");
     attendanceInputs[0].setCustomValidity(["si", "no"].includes(asiste) ? "" : "Selecciona si asistirás.");
-    companions.setCustomValidity(Number.isInteger(acompanantes) && acompanantes >= 0 && acompanantes <= 7
+    companions.setCustomValidity(Number.isInteger(acompanantes) && acompanantes >= 0 && acompanantes <= maxCompanions
       ? ""
-      : "Elige entre 0 y 7 acompañantes.");
+      : `Elige entre 0 y ${maxCompanions} acompañantes.`);
 
     if (!form.reportValidity()) return null;
 
@@ -153,6 +240,7 @@
 
     return {
       type: "rsvp",
+      ...(invitation ? { inviteCode: invitation.inviteCode } : {}),
       nombre,
       apellido,
       telefono,
@@ -165,16 +253,14 @@
   form.addEventListener("input", (event) => event.target.setCustomValidity(""));
   form.addEventListener("change", (event) => {
     if (event.target.name !== "asiste") return;
-    const attending = event.target.value === "si";
-    $("#companions-field").style.opacity = attending ? "1" : ".45";
-    companions.disabled = !attending;
-    if (!attending) companions.value = "0";
+    updateRSVPAvailability();
     companions.setCustomValidity("");
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (isSubmitting) return;
+    if (hasInviteCode && invitationState !== "valid") return;
 
     const payload = buildPayload();
     if (!payload) {
@@ -209,14 +295,14 @@
       status.textContent = "No pudimos registrar tu confirmación. Inténtalo nuevamente.";
     } finally {
       isSubmitting = false;
-      submitButton.disabled = false;
+      updateRSVPAvailability();
       submitButton.textContent = submitLabel;
     }
   });
 
   form.addEventListener("reset", () => {
-    companions.disabled = false;
-    $("#companions-field").style.opacity = "1";
+    // El evento reset ocurre antes de que el navegador restaure los campos.
+    queueMicrotask(updateRSVPAvailability);
     nameInput.setCustomValidity("");
     surnameInput.setCustomValidity("");
     phoneInput.setCustomValidity("");
